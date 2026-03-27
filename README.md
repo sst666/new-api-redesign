@@ -8,12 +8,149 @@
 
 ## 📦 目录
 
-- [快速部署](#-快速部署)
-- [配置说明](#-配置说明)
-- [页面自定义](#-页面自定义)
-- [订阅链接配置](#-订阅链接配置)
-- [文件结构](#-文件结构)
-- [常见问题](#-常见问题)
+- [🐳 Docker 部署（推荐用于 New API）](#-docker-部署推荐用于-new-api)
+- [🚀 快速部署](#-快速部署)
+- [⚙️ 配置说明](#-配置说明)
+- [🎨 页面自定义](#-页面自定义)
+- [🔗 订阅链接配置](#-订阅链接配置)
+- [📁 文件结构](#-文件结构)
+- [❓ 常见问题](#-常见问题)
+
+---
+
+## 🐳 Docker 部署（推荐用于 New API）
+
+New API 官方推荐使用 Docker 部署，本节说明如何通过 Docker 一键运行完整系统。
+
+### 前置要求
+
+- **Docker** 20.10+
+- **Docker Compose** 2.0+（或 Docker Desktop 自带）
+
+### 快速启动
+
+```bash
+# 1. 创建项目目录
+mkdir new-api && cd new-api
+
+# 2. 下载官方 docker-compose.yml
+curl -O https://raw.githubusercontent.com/QuantumNous/new-api/main/docker-compose.yml
+
+# 3. 创建数据目录
+mkdir -p data logs
+
+# 4. 启动（PostgreSQL + Redis + New API 自动启动）
+docker-compose up -d
+
+# 5. 访问前端
+# http://localhost:3000
+```
+
+> 首次启动会自动初始化数据库，稍等 10-20 秒即可访问。
+
+### 默认账号密码
+
+| 角色 | 用户名 | 密码 |
+|------|--------|------|
+| 管理员 | `root` | `123456` |
+
+> ⚠️ **务必在部署后立即修改默认密码！**
+
+### 修改默认密码
+
+进入后台 → 设置 → 个人设置 → 修改密码
+
+### Docker 环境变量说明
+
+`docker-compose.yml` 中常用配置项：
+
+```yaml
+environment:
+  - SQL_DSN=postgresql://root:123456@postgres:5432/new-api   # 数据库连接
+  - REDIS_CONN_STRING=redis://redis                           # Redis 连接
+  - TZ=Asia/Shanghai                                         # 时区
+  - ERROR_LOG_ENABLED=true                                   # 启用错误日志
+  - BATCH_UPDATE_ENABLED=true                                # 启用批量更新
+  # - STREAMING_TIMEOUT=300        # 流模式超时（秒），默认120s
+  # - SESSION_SECRET=random_string  # 多机部署必须修改！随机字符串
+  # - SYNC_FREQUENCY=60            # 数据库同步频率（秒）
+```
+
+### 使用 MySQL 替代 PostgreSQL
+
+```bash
+# 1. 编辑 docker-compose.yml，注释掉 postgres 相关内容
+# 2. 取消 mysql 服务的注释
+# 3. 修改 SQL_DSN：
+SQL_DSN=root:123456@tcp(mysql:3306)/new-api
+```
+
+### 数据持久化
+
+所有数据存储在 Docker volumes 中：
+
+| Volume | 说明 |
+|--------|------|
+| `pg_data` | PostgreSQL 数据 |
+| `./data` | New API 应用数据 |
+| `./logs` | 应用日志 |
+
+### 更新 New API 版本
+
+```bash
+# 拉取最新镜像
+docker-compose pull
+
+# 重启服务
+docker-compose up -d
+```
+
+### 停止服务
+
+```bash
+docker-compose down      # 停止容器（数据保留）
+docker-compose down -v   # 停止并删除数据（慎用！）
+```
+
+### 常用命令
+
+```bash
+# 查看运行状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f new-api
+
+# 进入容器（调试用）
+docker exec -it new-api sh
+
+# 重启服务
+docker-compose restart new-api
+```
+
+### 常见问题
+
+**Q: 启动后无法访问？**
+```bash
+# 检查容器状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs new-api
+
+# 重启服务
+docker-compose restart
+```
+
+**Q: 数据库连接失败？**
+确保 `SQL_DSN` 中的密码与 PostgreSQL 容器配置的 `POSTGRES_PASSWORD` 一致。
+
+**Q: 端口被占用？**
+修改 `docker-compose.yml` 中的端口映射：
+```yaml
+ports:
+  - "3001:3000"  # 改为 3001
+```
 
 ---
 
